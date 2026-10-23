@@ -1,0 +1,66 @@
+{
+  "name": "hivedesk",
+  "productName": "HiveDesk",
+  "version": "0.2.4",
+  "private": true,
+  "description": "Multi-agent trading desk with paper/real execution via Binance & Toss Securities, powered by your Claude account",
+  "main": "dist/electron/main.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json && npm run bundle:renderer",
+    "bundle:renderer": "npm run bundle:app && npm run copy:views",
+    "bundle:app": "esbuild renderer/ts/app.ts --bundle --outfile=renderer/js/app.js --format=iife --target=es2022",
+    "copy:views": "mkdir -p dist/renderer/js && cp renderer/index.html dist/renderer/ && cp -r renderer/css dist/renderer/ && cp renderer/js/app.js dist/renderer/js/",
+    "start": "electron .",
+    "dev": "npm run build && electron .",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.292",
+    "better-sqlite3": "12.4.1",
+    "electron-updater": "^6.8.9"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.10.5",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.2",
+    "semver": "^7.6.3",
+    "typescript": "^5.7.3"
+  },
+  "build": {
+    "appId": "com.hivedesk.app",
+    "productName": "HiveDesk",
+    "icon": "build/icon.png",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "renderer/**",
+      "package.json",
+      "node_modules/**",
+      "!node_modules/*/{test,__tests__,tests,example,examples}/**"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**",
+      "node_modules/@anthropic-ai/claude-agent-sdk/**"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.finance"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    }
+  }
+}

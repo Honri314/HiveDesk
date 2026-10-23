@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>HiveDesk — AI 에이전트 트레이딩 데스크 (모의거래 · 실거래 · 자동매매)</title>
+  <meta name="description" content="TradingAgents 기반 멀티 에이전트 트레이딩 데스크. Claude 구독 계정 로그인으로 구동되는 모의거래 데스크톱 앱 (macOS / Windows)."/>
+  <link rel="icon" type="image/png" href="assets/icon.png"/>
+  <link rel="apple-touch-icon" href="assets/icon.png"/>
+  <meta property="og:title" content="HiveDesk — AI 에이전트 트레이딩 데스크"/>
+  <meta property="og:description" content="AI 에이전트 10명이 회의를 열어 매수·매도·홀드를 결정합니다. Claude 구독 계정으로 구동, 모의거래 기본."/>
+  <meta property="og:image" content="assets/icon.png"/>
+  <meta property="og:type" content="website"/>
+  <style>
+    :root { --bg:#0a0d12; --bg2:#0d1320; --panel:#11161e; --panel2:#151c28; --line:#232b38; --text:#d8e2ef; --dim:#7a879b; --accent:#4f8cff; --accent2:#8b5cf6; --up:#2ed573; --down:#ff5a5f; --amber:#ffb84f; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif; line-height:1.65; overflow-x:hidden; }
+    a { color:var(--accent); text-decoration:none; }
+    code { background:#00000066; padding:2px 6px; border-radius:4px; font-size:13px; }
+
+    /* ---------- ambient background ---------- */
+    .bgfx { position:fixed; inset:0; z-index:-1; overflow:hidden; background:
+      radial-gradient(1200px 600px at 70% -10%, rgba(79,140,255,.12), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(139,92,246,.10), transparent 60%), var(--bg); }
+    .bgfx::before { content:""; position:absolute; inset:0;
+      background-image:linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size:44px 44px; mask-image:radial-gradient(ellipse 90% 70% at 50% 30%, #000 30%, transparent 75%); }
+    .orb { position:absolute; border-radius:50%; filter:blur(70px); opacity:.5; animation:drift 26s ease-in-out infinite alternate; }
+    .orb.a { width:420px; height:420px; background:#1d3f7a; top:-120px; left:8%; }
+    .orb.b { width:360px; height:360px; background:#3a2a6e; top:30%; right:-100px; animation-delay:-8s; }
+    .orb.c { width:300px; height:300px; background:#123a55; bottom:-80px; left:35%; animation-delay:-16s; }
+    @keyframes drift { from { transform:translate(0,0) scale(1); } to { transform:translate(60px,40px) scale(1.15); } }
+
+    /* ---------- header ---------- */
+    header { display:flex; align-items:center; justify-content:space-between; padding:16px 28px; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(10,13,18,.85); backdrop-filter:blur(10px); z-index:10; }
+    .logo { font-weight:900; letter-spacing:2px; color:var(--accent); text-shadow:0 0 14px rgba(79,140,255,.55); }
+    .logo .dot { display:inline-block; width:8px; height:8px; margin-right:8px; background:var(--up); border-radius:2px; box-shadow:0 0 10px var(--up); animation:blink 2.4s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+    nav { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+    .btn { display:inline-block; padding:8px 18px; border-radius:10px; font-weight:800; font-size:14px; transition:transform .18s, box-shadow .18s, background .18s; }
+    .btn:hover { transform:translateY(-2px); }
+    .btn.primary { background:linear-gradient(135deg, var(--accent), #3a6fe0); color:#fff; box-shadow:0 6px 22px rgba(79,140,255,.35); }
+    .btn.ghost { border:1px solid var(--line); color:var(--text); }
+    .btn.ghost:hover { border-color:var(--accent); color:#fff; }
+    .btn.discord { background:#5865F2; color:#fff; box-shadow:0 6px 22px rgba(88,101,242,.35); }
+    .btn.discord:hover { box-shadow:0 8px 28px rgba(88,101,242,.55); }
+    .btn.big { padding:15px 30px; font-size:16px; border-radius:12px; }
+
+    .container { max-width:1320px; margin:0 auto; padding:0 28px; }
+
+    /* ---------- hero ---------- */
+    .hero { text-align:center; padding:84px 0 30px; position:relative; }
+    .anim .hero .pill { animation:fadeUp .8s both; }
+    .anim .hero h1 { animation:fadeUp .8s .12s both; }
+    .anim .hero p { animation:fadeUp .8s .22s both; }
+    .anim .hero .cta { animation:fadeUp .8s .3s both; }
+    .anim .hero .os-hint { animation:fadeUp .8s .4s both; }
+    .hero .pill { display:inline-block; padding:6px 16px; border-radius:999px; border:1px solid rgba(79,140,255,.35); background:rgba(79,140,255,.08); color:#9db8e8; font-size:13px; font-weight:700; letter-spacing:.5px; }
+    .hero h1 { font-size:clamp(30px,5.4vw,52px); line-height:1.22; margin:20px 0 16px; }
+    .hero h1 .grad { background:linear-gradient(92deg, #4f8cff 20%, #8b5cf6 55%, #2ed573 90%); background-size:220% 100%; -webkit-background-clip:text; background-clip:text; color:transparent; animation:shine 5s linear infinite; }
+    @keyframes shine { to { background-position:220% 0; } }
+    .hero p { color:var(--dim); max-width:740px; margin:0 auto 26px; font-size:17px; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
+    .cta { display:inline-flex; gap:12px; margin:6px 0 12px; flex-wrap:wrap; justify-content:center; }
+    .os-hint { color:var(--dim); font-size:13px; }
+
+    /* pixel agents strip */
+    #agents-strip { display:block; margin:26px auto 0; image-rendering:pixelated; }
+
+    /* decision ticker */
+    .ticker { border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:rgba(17,22,30,.6); overflow:hidden; padding:10px 0; margin:34px 0 0; }
+    .ticker .track { display:inline-flex; gap:34px; white-space:nowrap; animation:marquee 30s linear infinite; padding-left:24px; }
+    .ticker:hover .track { animation-play-state:paused; }
+    @keyframes marquee { to { transform:translateX(-50%); } }
+    .tick { font-size:13px; color:var(--dim); }
+    .tick b.act { margin-right:8px; }
+    .tick .buy { color:var(--up); } .tick .sell { color:var(--down); } .tick .hold { color:var(--amber); }
+
+    /* ---------- screenshots ---------- */
+    .shots { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:22px; margin-top:26px; }
+    .shot { border-radius:16px; border:1px solid var(--line); background:var(--panel); padding:10px; transition:transform .25s, box-shadow .25s, border-color .25s; }
+    .shot:hover { transform:translateY(-6px) scale(1.012); border-color:rgba(79,140,255,.5); box-shadow:0 18px 48px rgba(79,140,255,.18); }
+    .shot img { width:100%; display:block; border-radius:10px; }
+    .shot figcaption { display:flex; justify-content:space-between; align-items:center; padding:10px 6px 4px; font-size:13.5px; }
+    .shot figcaption b { color:var(--text); }
+    .shot figcaption span { color:var(--dim); font-size:12px; }
+    .live-dot { display:inline-block; width:7px; height:7px; margin-right:6px; background:var(--down); border-radius:50%; animation:blink 1.6s infinite; }
+
+    /* ---------- sections ---------- */
+    .section { padding:64px 0; }
+    .section > h2 { font-size:28px; margin:0 0 6px; }
+    .section > .lead { color:var(--dim); margin:0 0 26px; font-size:15px; }
+
+    /* reveal on scroll */
+    .rv { opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+    .rv.in { opacity:1; transform:none; }
+    .rv.d1 { transition-delay:.08s; } .rv.d2 { transition-delay:.16s; } .rv.d3 { transition-delay:.24s; } .rv.d4 { transition-delay:.32s; }
+
+    /* pipeline flow */
+    .flow { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; }
+    .step { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; font-size:13.5px; color:var(--dim); position:relative; transition:transform .2s, border-color .2s; }
+    .step:hover { transform:translateY(-4px); border-color:rgba(79,140,255,.45); }
+    .step b { display:block; color:var(--accent); margin-bottom:6px; font-size:12.5px; letter-spacing:1px; }
+    .step .n { position:absolute; top:12px; right:14px; font-size:22px; font-weight:900; color:rgba(79,140,255,.14); }
+    .step .pop { animation:pop 2.6s ease-in-out infinite; }
+    @keyframes pop { 0%,100% { transform:scale(1); } 50% { transform:scale(1.06); } }
+
+    /* pipeline carousel — one step at a time, sliding sideways */
+    .fc-viewport { overflow:hidden; border-radius:16px; }
+    .fc-track { display:flex; transition:transform .5s cubic-bezier(.22,.61,.36,1); }
+    .fstep { min-width:100%; box-sizing:border-box; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:30px 34px 26px; font-size:15px; color:var(--dim); position:relative; min-height:150px; transition:border-color .3s; }
+    .fstep b { display:block; color:var(--accent); margin-bottom:10px; font-size:14px; letter-spacing:1.5px; }
+    .fstep .n { position:absolute; top:16px; right:24px; font-size:52px; font-weight:900; line-height:1; color:rgba(79,140,255,.15); }
+    .fstep .arrow { position:absolute; top:26px; left:34px; color:var(--dim); font-size:12px; letter-spacing:1px; }
+    .fc-dots { display:flex; gap:8px; justify-content:center; margin-top:16px; }
+    .fc-dot { width:8px; height:8px; border-radius:4px; background:var(--line); cursor:pointer; transition:all .3s; padding:0; border:0; }
+    .fc-dot.on { background:var(--accent); width:24px; box-shadow:0 0 10px rgba(79,140,255,.5); }
+    .fc-nav { display:flex; gap:10px; justify-content:center; align-items:center; margin-top:14px; }
+    .fc-nav button { background:var(--panel); border:1px solid var(--line); color:var(--dim); border-radius:8px; padding:6px 14px; cursor:pointer; font-size:13px; transition:all .2s; }
+    .fc-nav button:hover { color:var(--text); border-color:var(--accent); }
+
+    /* feature cards */
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; transition:transform .2s, border-color .2s, box-shadow .2s; position:relative; overflow:hidden; }
+    .card::before { content:""; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--accent), var(--accent2)); opacity:0; transition:opacity .2s; }
+    .card:hover { transform:translateY(-4px); border-color:rgba(79,140,255,.4); box-shadow:0 14px 34px rgba(0,0,0,.35); }
+    .card:hover::before { opacity:1; }
+    .card h3 { margin:8px 0 8px; font-size:16.5px; }
+    .card p { margin:0; color:var(--dim); font-size:13.5px; }
+    .card .ic { width:40px; height:40px; border-radius:11px; display:grid; place-items:center; background:#181a24; border:1.5px solid rgba(255,183,77,.35); color:#ffb74d; }
+    .card .ic svg.gi { width:19px; height:19px; }
+    .card:hover .ic { border-color:rgba(255,183,77,.7); background:#1e202c; }
+
+    /* glyph icons (pixel style, app icon aesthetic) */
+    svg.gi { width:1.15em; height:1.15em; vertical-align:-.22em; fill:currentColor; }
+    svg.gi.fill { fill:currentColor; }
+    .logo-ic { width:24px; height:24px; border-radius:6px; vertical-align:-7px; margin-right:9px; box-shadow:0 2px 10px rgba(0,0,0,.45); }
+    .card h3 .badge { margin-left:8px; vertical-align:2px; }
+    .badge { display:inline-block; padding:2px 10px; border-radius:6px; font-size:12px; font-weight:800; }
+    .badge.up { background:rgba(46,213,115,.15); color:var(--up); }
+    .badge.amber { background:rgba(255,184,79,.15); color:var(--amber); }
+
+    /* FAQ */
+    .faq { max-width:900px; margin:0 auto; }
+    details { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:0 18px; margin:10px 0; transition:border-color .2s; }
+    details[open] { border-color:rgba(79,140,255,.4); }
+    summary { cursor:pointer; padding:15px 0; font-weight:700; font-size:15px; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+    summary::-webkit-details-marker { display:none; }
+    summary::after { content:"+"; color:var(--accent); font-size:20px; transition:transform .25s; }
+    details[open] summary::after { transform:rotate(45deg); }
+    details p { color:var(--dim); font-size:14px; margin:0 0 14px; }
+
+    /* discord CTA */
+    .discord-banner { margin-top:10px; border-radius:18px; padding:36px 30px; text-align:center; position:relative; overflow:hidden; border:1px solid rgba(88,101,242,.45); background:linear-gradient(120deg, rgba(88,101,242,.22), rgba(139,92,246,.14), rgba(88,101,242,.22)); background-size:200% 200%; animation:gradmove 7s ease infinite; }
+    @keyframes gradmove { 0%,100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
+    .discord-banner h2 { margin:0 0 8px; font-size:24px; }
+    .discord-banner p { color:#b9c1e8; margin:0 0 20px; font-size:14.5px; }
+    .pulse { animation:pulse 2.2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(88,101,242,.55); } 55% { box-shadow:0 0 0 14px rgba(88,101,242,0); } }
+
+    /* ---------- download ---------- */
+    .dl-table { width:100%; border-collapse:collapse; margin-top:8px; }
+    .dl-table th,.dl-table td { text-align:left; padding:12px 10px; border-bottom:1px solid var(--line); font-size:14px; }
+    .dl-table th { color:var(--dim); font-weight:600; font-size:12px; letter-spacing:1px; }
+    .dl-table tr { transition:background .2s; }
+    .dl-table tr:hover { background:rgba(79,140,255,.05); }
+    .note { background:rgba(255,184,79,.08); border:1px solid rgba(255,184,79,.3); color:var(--amber); padding:12px 16px; border-radius:10px; font-size:13px; }
+    .os-hint.small { font-size:13px; }
+
+    footer { border-top:1px solid var(--line); color:var(--dim); font-size:12px; padding:28px 0 42px; text-align:center; margin-top:40px; }
+    footer .links { margin-bottom:10px; }
+    footer .links a { margin:0 12px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation:none !important; transition:none !important; }
+      .rv { opacity:1; transform:none; }
+    }
+
+    /* ---------- mobile ---------- */
+    #agents-strip { width:100%; max-width:520px; height:auto; }
+    .dl-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    @media (max-width: 760px) {
+      header { padding:10px 14px; }
+      .logo { font-size:14px; }
+      nav { gap:6px; }
+      nav .btn { padding:7px 12px; font-size:12.5px; white-space:nowrap; }
+      nav .btn.ghost { display:none; } /* 헤더의 가이드 버튼은 폭 부족 — 히어로/푸터 링크로 대체 */
+      .container { padding:0 16px; }
+      .hero { padding:48px 0 18px; }
+      .hero h1 { font-size:clamp(25px,7.4vw,34px); }
+      .hero p { font-size:15px; }
+      .hero .pill { font-size:12px; padding:5px 13px; }
+      .cta { display:flex; flex-direction:column; align-items:stretch; gap:10px; max-width:340px; margin-left:auto; margin-right:auto; }
+      .cta .btn.big { text-align:center; padding:13px 20px; font-size:15px; }
+      .os-hint { padding:0 8px; }
+      .section { padding:44px 0; }
+      .section > h2 { font-size:22px; }
+      .fstep { padding:22px 20px 18px; min-height:130px; font-size:14px; }
+      .fstep .n { font-size:40px; right:18px; top:14px; }
+      .fc-nav button { padding:5px 11px; font-size:12px; }
+      .shots { grid-template-columns:1fr; gap:16px; }
+      .step { font-size:13px; }
+      .dl-table { min-width:540px; } /* 4열 표는 가로 스크롤 */
+      .discord-banner { padding:28px 18px; border-radius:14px; }
+      .discord-banner h2 { font-size:20px; }
+      footer { padding:22px 0 34px; }
+      footer .links a { margin:0 8px; display:inline-block; }
+    }
+    @media (max-width: 380px) {
+      nav .btn { padding:6px 9px; font-size:11.5px; }
+      .hero h1 { font-size:clamp(22px,8.6vw,30px); }
+    }
+  </style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="i-bot" viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="5" y="1" width="2" height="1"/><rect x="5" y="2" width="2" height="1"/><rect x="1" y="3" width="10" height="1"/><rect x="0" y="4" width="12" height="1"/><rect x="0" y="5" width="3" height="1"/><rect x="4" y="5" width="4" height="1"/><rect x="9" y="5" width="3" height="1"/><rect x="0" y="6" width="3" height="1"/><rect x="4" y="6" width="4" height="1"/><rect x="9" y="6" width="3" height="1"/><rect x="0" y="7" width="12" height="1"/><rect x="0" y="8" width="5" height="1"/><rect x="7" y="8" width="5" height="1"/><rect x="0" y="9" width="12" height="1"/><rect x="1" y="10" width="2" height="1"/><rect x="9" y="10" width="2" height="1"/></symbol><symbol id="i-key" viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="2" y="1" width="4" height="1"/><rect x="1" y="2" width="2" height="1"/><rect x="5" y="2" width="2" height="1"/><rect x="1" y="3" width="2" height="1"/><rect x="5" y="3" width="2" height="1"/><rect x="2" y="4" width="4" height="1"/><rect x="4" y="5" width="2" height="1"/><rect x="4" y="6" width="2" height="1"/><rect x="4" y="7" width="2" height="1"/><rect x="7" y="7" width="2" height="1"/><rect x="4" y="8" width="2" height="1"/><rect x="4" y="9" width="5" height="1"/><rect x="4" y="10" width="2" height="1"/><rect x="7" y="10" width="2" height="1"/></symbol><symbol id="i-sliders" viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="1" y="2" width="10" height="1"/><rect x="5" y="3" width="2" height="1"/><rect x="1" y="4" width="10" height="1"/><rect x="1" y="7" width="10" height="1"/><rect x="2" y="8" width="2" height="1"/><rect x="1" y="9" width="10" height="1"/></symbol><symbol id="i-building" viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="2" y="1" width="8" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="4" y="2" width="2" height="1"/><rect x="7" y="2" width="2" height="1"/><rect x="10" y="2" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="4" y="3" width="2" height="1"/><rect x="7" y="3" width="2" height="1"/><rect x="10" y="3" width="1" height="1"/><rect x="2" y="4" width="8" height="1"/><rect x="2" y="5" width="1" height="1"/><rect x="4" y="5" width="2" height="1"/><rect x="7" y="5" width="2" height="1"/><rect x="10" y="5" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/><rect x="4" y="6" width="2" height="1"/><rect x="7" y="6" width="2" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="2" y="7" width="8" height="1"/><rect x="2" y="8" width="3" height="1"/><rect x="7" y="8" width="3" height="1"/><rect x="2" y="9" width="3" height="1"/><rect x="7" y="9" width="3" height="1"/><rect x="2" y="10" width="8" height="1"/></symbol><symbol id="i-chart" viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="10" y="2" width="2" height="1"/><rect x="10" y="3" width="2" height="1"/><rect x="5" y="4" width="2" height="1"/><rect x="10" y="4" width="2" height="1"/><rect x="5" y="5" width="2" height="1"/><rect x="10" y="5" width="2" height="1"/><rect x="1" y="6" width="2" height="1"/><rect x="5" y="6" width="2" height="1"/><rect x="10" y="6" width="2" height="1"/><rect x="1" y="7" width="2" height="1"/><rect x="5" y="7" width="2" height="1"/><rect x="10" y="7" width="2" height="1"/><rect x="1" y="8" width="2" height="1"/><rect x="5" y="8" width="2" height="1"/><rect x="10" y="8" width="2" height="1"/><rect x="0" y="9" width="12" height="1"/><rect x="0" y="10" width="12" height="1"/></symbol><symbol id="i-db" viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="2" y="1" width="8" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="9" y="2" width="1" height="1"/><rect x="2" y="3" width="8" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="9" y="4" width="1" height="1"/><rect x="2" y="5" width="8" height="1"/><rect x="2" y="6" width="1" height="1"/><rect x="9" y="6" width="1" height="1"/><rect x="2" y="7" width="8" height="1"/><rect x="2" y="8" width="1" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="2" y="9" width="8" height="1"/></symbol><symbol id="i-bolt" viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="6" y="1" width="2" height="1"/><rect x="5" y="2" width="2" height="1"/><rect x="4" y="3" width="2" height="1"/><rect x="3" y="4" width="7" height="1"/><rect x="2" y="5" width="8" height="1"/><rect x="4" y="6" width="5" height="1"/><rect x="3" y="7" width="4" height="1"/><rect x="2" y="8" width="3" height="1"/><rect x="2" y="9" width="2" height="1"/><rect x="2" y="10" width="1" height="1"/></symbol><symbol id="i-shield" viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="1" y="1" width="10" height="1"/><rect x="0" y="2" width="12" height="1"/><rect x="0" y="3" width="12" height="1"/><rect x="0" y="4" width="4" height="1"/><rect x="6" y="4" width="6" height="1"/><rect x="0" y="5" width="4" height="1"/><rect x="6" y="5" width="6" height="1"/><rect x="0" y="6" width="4" height="1"/><rect x="8" y="6" width="4" height="1"/><rect x="1" y="7" width="10" height="1"/><rect x="2" y="8" width="8" height="1"/><rect x="3" y="9" width="6" height="1"/><rect x="4" y="10" width="4" height="1"/><rect x="5" y="11" width="2" height="1"/></symbol><symbol id="i-chat" viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="1" y="2" width="10" height="1"/><rect x="0" y="3" width="12" height="1"/><rect x="0" y="4" width="2" height="1"/><rect x="4" y="4" width="2" height="1"/><rect x="8" y="4" width="4" height="1"/><rect x="0" y="5" width="2" height="1"/><rect x="4" y="5" width="2" height="1"/><rect x="8" y="5" width="4" height="1"/><rect x="0" y="6" width="12" height="1"/><rect x="1" y="7" width="9" height="1"/><rect x="2" y="8" width="8" height="1"/><rect x="4" y="9" width="3" height="1"/><rect x="5" y="10" width="1" height="1"/></symbol><symbol id="i-book" viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="1" y="2" width="10" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="10" y="3" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="3" y="4" width="6" height="1"/><rect x="10" y="4" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="10" y="5" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="3" y="6" width="6" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="1" y="7" width="1" height="1"/><rect x="10" y="7" width="1" height="1"/><rect x="1" y="8" width="1" height="1"/><rect x="10" y="8" width="1" height="1"/><rect x="1" y="9" width="10" height="1"/></symbol><symbol id="i-discord" viewBox="0 0 24 24"><path d="M20.317 4.37a19.79 19.79 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.099.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></symbol></svg>
+<div class="bgfx"><div class="orb a"></div><div class="orb b"></div><div class="orb c"></div></div>
+<header>
+  <div class="logo"><img class="logo-ic" src="assets/icon.png" alt=""/><span class="dot"></span>HIVEDESK</div>
+  <nav>
+    <a href="guide.html" class="btn ghost"><svg class="gi"><use href="#i-book"/></svg> 설치·설정 가이드</a>
+    <a href="https://discord.com/invite/FGqZ7jJpFD" target="_blank" rel="noopener" class="btn discord"><svg class="gi fill"><use href="#i-discord"/></svg> Discord</a>
+    <a href="#download" class="btn primary">다운로드</a>
+  </nav>
+</header>
+
+<div class="container">
+  <section class="hero">
+    <span class="pill"><svg class="gi"><use href="#i-bot"/></svg> AI 에이전트 10명이 실시간 회의 중</span>
+    <h1>AI 에이전트들이 회의를 열어<br/><span class="grad">매수 · 매도 · 홀드</span>를 결정합니다</h1>
+    <p>TradingAgents의 멀티 에이전트 파이프라인(애널리스트 → 토론 → 트레이더 → 리스크 → PM)을
+      <b>Claude 구독 계정</b>으로 구동하는 데스크톱 앱입니다. 모의거래가 기본이고,
+      브로커 API 키를 등록하면 실거래와 자동 매매도 가능합니다.</p>
+    <div class="cta">
+      <a class="btn primary big" href="#download">무료로 시작하기</a>
+      <a class="btn ghost big" href="guide.html">설치 가이드</a>
+      <a class="btn discord big pulse" href="https://discord.com/invite/FGqZ7jJpFD" target="_blank" rel="noopener"><svg class="gi fill"><use href="#i-discord"/></svg> Discord 참여</a>
+    </div>
+    <div class="os-hint">macOS · Windows(ARM) 지원 · 설치 후 계정 연동만으로 바로 사용</div>
+    <canvas id="agents-strip" width="520" height="56" aria-hidden="true"></canvas>
+  </section>
+
+  <div class="ticker" aria-hidden="true">
+    <div class="track" id="ticker-track"></div>
+  </div>
+
+  <section class="section" id="how">
+    <h2 class="rv">회의는 이렇게 진행됩니다</h2>
+    <p class="lead rv">애널리스트 → 토론 → 트레이더 → 리스크 → PM, 5단계 파이프라인</p>
+    <div class="fc-carousel rv" id="fc">
+      <div class="fc-viewport">
+        <div class="fc-track" id="fc-track">
+          <div class="fstep"><span class="n">1</span><b>STEP 1 · ANALYSTS</b>기술·뉴스·센티먼트·펀더멘털 애널리스트 4인이 같은 시세 스냅샷(MA/RSI/MACD, 뉴스, 공포탐욕지수)을 놓고 각자 해석을 발언합니다. 관점이 다른 초기 리포트가 만들어집니다.</div>
+          <div class="fstep"><span class="n">2</span><b>STEP 2 · RESEARCH</b>강세 리서처와 약세 리서처가 서로의 주장을 집요하게 반박합니다. 리서치 총괄이 양쪽 논거를 검증해 중재 결론을 제시하고 bull/bear 케이스를 정리합니다.</div>
+          <div class="fstep"><span class="n">3</span><b>STEP 3 · TRADER</b>토론 결론을 근거로 트레이더가 구체적인 매매안을 제출합니다 — 진입 가격, 수량, 손절 라인, 확신도까지 플랜으로 정리됩니다.</div>
+          <div class="fstep"><span class="n">4</span><b>STEP 4 · RISK</b>리스크 매니저가 브레이크를 밟습니다. 손절 라인, 비중 한도(현금의 20%), 과열 구간을 체크해 무리한 주문은 이 단계에서 걸러집니다.</div>
+          <div class="fstep"><span class="n">5</span><b>STEP 5 · PM FINAL</b>포트폴리오 매니저가 최종 승인·기각을 결정합니다. 승인 시에만 주문이 체결되며, 픽셀 오피스에서 이 전 과정이 실시간으로 재생됩니다.</div>
+        </div>
+      </div>
+      <div class="fc-nav">
+        <button type="button" id="fc-prev">← 이전</button>
+        <div class="fc-dots" id="fc-dots"></div>
+        <button type="button" id="fc-next">다음 →</button>
+      </div>
+    </div>
+  </section>
+  <section class="section">
+    <h2 class="rv">왜 HiveDesk인가</h2>
+    <p class="lead rv">계정 연동만으로 AI 회의 · 브로커 키 등록 시 실거래까지</p>
+    <div class="grid">
+      <div class="card rv"><div class="ic"><svg class="gi"><use href="#i-key"/></svg></div><h3>계정 로그인 연동</h3><p>터미널에서 <code>claude</code>에 로그인하면 끝. 앱은 여러분의 Claude 구독 한도 안에서 회의를 진행하며, API 키를 수집하거나 저장하지 않습니다.</p></div>
+      <div class="card rv d1"><div class="ic"><svg class="gi"><use href="#i-sliders"/></svg></div><h3>데모 모드</h3><p>Claude 연동 전에도 동일한 파이프라인을 규칙 기반 페르소나로 체험할 수 있습니다. 회의 구조와 판정 흐름을 먼저 확인하세요.</p></div>
+      <div class="card rv d2"><div class="ic"><svg class="gi"><use href="#i-building"/></svg></div><h3>픽셀 오피스</h3><p>회의실·경영실·부서별 워크스테이션·키친이 있는 회사 오피스에서 회의가 재현됩니다. 리서치 발언 때는 회의실로 집합하고, 발언을 클릭하면 그 시점부터 재생합니다.</p></div>
+      <div class="card rv"><div class="ic"><svg class="gi"><use href="#i-chart"/></svg></div><h3>실시간 시세</h3><p>Yahoo Finance·Binance 공개 시세로 국내주식·코인·글로벌 티커(삼성전자, BTC, NVDA 등)를 지원합니다. 오프라인이면 합성 데이터로 자동 전환됩니다.</p></div>
+      <div class="card rv d1"><div class="ic"><svg class="gi"><use href="#i-db"/></svg></div><h3>투명한 기록</h3><p>모든 회의 턴·결정·주문이 로컬 SQLite에 기록됩니다. 포트폴리오 탭에서 현금·포지션·평가손익을 실시간으로 확인하세요.</p></div>
+      <div class="card rv d2"><div class="ic"><svg class="gi"><use href="#i-bolt"/></svg></div><h3>바이낸스·토스증권 연동 <span class="badge amber">실거래</span></h3><p>자동매매 탭에서 브로커 API 키를 등록하면 활성화됩니다. 전역 킬스위치 + 전략 잠금해제 이중 안전장치, 수동 승인 큐가 기본입니다.</p></div>
+      <div class="card rv d3"><div class="ic"><svg class="gi"><use href="#i-shield"/></svg></div><h3>안전 규칙 <span class="badge up">모의거래</span></h3><p>기본값은 모의거래입니다. 실제 주문 없음 · 현금 부족 시 자동 기각 · 확신도 60% 미달 시 자동 홀드. 모드는 전략별로 선택합니다.</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="rv">자주 묻는 질문</h2>
+    <div class="faq">
+      <details class="rv"><summary>API 키 없이 쓸 수 있나요?</summary><p>네. API 키를 수집하지 않고 Claude 구독 계정 로그인만으로 동작합니다. 연동 전에도 데모 모드로 전체 파이프라인을 체험할 수 있습니다.</p></details>
+      <details class="rv d1"><summary>실제 주문이 나가지 않을까 걱정돼요</summary><p>기본값은 모의거래입니다. 실거래는 ①전역 킬스위치 ON ②전략별 잠금해제 두 가지가 모두 켜져야 가능하고, 수동 승인 방식이면 승인 큐에서 직접 눌러야 체결됩니다.</p></details>
+      <details class="rv d2"><summary>어떤 종목을 지원하나요?</summary><p>바이낸스 상장 코인(BTC 등)과 토스증권 연동 한국 주식(삼성전자, 하이닉스 등), Yahoo Finance 시세의 글로벌 티커(NVDA 등)를 지원합니다.</p></details>
+      <details class="rv d3"><summary>회의 품질은 뭐가 달라지나요?</summary><p>데모 모드는 규칙 기반 페르소나로 구조를 보여주고, Claude 연동 시 실제 LLM이 시세를 해석해 발언합니다. 사용량은 구독 등급 한도 안에서 처리됩니다.</p></details>
+    </div>
+  </section>
+
+  <section class="section">      <div class="discord-banner rv">
+      <h2><svg class="gi"><use href="#i-chat"/></svg> Discord 커뮤니티에 참여하세요</h2>
+      <p>업데이트 소식 · 사용 팁 · 버그 리포트 · 전략 공유</p>
+      <a class="btn discord big pulse" href="https://discord.com/invite/FGqZ7jJpFD" target="_blank" rel="noopener"><svg class="gi fill"><use href="#i-discord"/></svg> 지금 참여하기</a>
+    </div>
+  </section>
+  <section class="section">
+    <h2 class="rv">실제 앱 화면</h2>
+    <p class="lead rv">회사 오피스에서 에이전트들이 각자 자리에서 분석하고, 리서치 토론 때는 회의실로 모입니다.</p>
+    <div class="shots">
+      <figure class="shot rv d1">
+        <img src="assets/office.png" alt="HiveDesk 픽셀 오피스 전경" loading="lazy"/>
+        <figcaption><b><span class="live-dot"></span>픽셀 오피스</b><span>부서별 워크스테이션 · 칸막이 · 회의실 · 키친</span></figcaption>
+      </figure>
+      <figure class="shot rv d2">
+        <img src="assets/meeting.png" alt="에이전트 회의 실행 화면"/>
+        <figcaption><b>회의 진행 중</b><span>말풍선 · 판정 패널 · 로그 재생</span></figcaption>
+      </figure>
+    </div>
+  </section>
+  <section class="section" id="download">
+    <h2 class="rv">다운로드</h2>
+    <p class="os-hint small rv" style="margin-bottom:12px">v0.2.3 — 설치 후 앱의 <b>설정</b> 탭에서 Claude 계정을, <b>자동매매</b> 탭에서 브로커 키를 연결하세요. (연동 없이도 데모 모드로 즉시 사용 가능)</p>
+    <div class="rv dl-scroll">
+    <table class="dl-table">
+      <thead><tr><th>플랫폼</th><th>파일</th><th>아키텍처</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>macOS 12+</td><td>HiveDesk-0.2.3-arm64.dmg</td><td>애플 실리콘 · 설치용 (권장)</td><td><a data-dl="mac-arm64" class="btn primary" style="padding:6px 16px" href="#">받기</a></td></tr>
+        <tr><td>macOS 12+</td><td>HiveDesk-0.2.3-arm64-mac.zip</td><td>애플 실리콘 · 설치 없이 바로 실행</td><td><a data-dl="mac-arm64-zip" class="btn primary" style="padding:6px 16px" href="#">받기</a></td></tr>
+        <tr id="row-win"><td>Windows 10/11 (x64)</td><td>HiveDesk Setup 0.2.3.exe</td><td>인텔/AMD · 설치용</td><td><a data-dl="win" class="btn primary" style="padding:6px 16px" href="#">받기</a></td></tr>
+        <tr id="row-win-zip"><td>Windows 10/11</td><td>HiveDesk-0.2.3-win.zip</td><td>인텔/AMD · 설치 없이 바로 실행</td><td><a data-dl="win-zip" class="btn primary" style="padding:6px 16px" href="#">받기</a></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="os-hint small rv" style="margin-top:12px">macOS 미서명 빌드 경고 시: 우클릭 → 열기. Windows SmartScreen 경고 시: 추가 정보 → 실행. 자세한 설치·설정 방법은 <a href="guide.html">가이드</a>를, 질문은 <a href="https://discord.com/invite/FGqZ7jJpFD" target="_blank" rel="noopener">Discord</a>를 이용해 주세요.</p>
+    <p class="note rv" style="margin-top:18px">본 앱은 AI 분석 지원 도구입니다. 모의거래 기본이며, 실거래 활성화 시 손실 위험이 사용자에게 있습니다. 투자 판단 참고용이며 수익을 보장하지 않습니다.</p>
+  </section>
+</div>
+
+<footer>
+  <div class="links">
+    <a href="guide.html">설치·설정 가이드</a>
+    <a href="https://discord.com/invite/FGqZ7jJpFD" target="_blank" rel="noopener"><svg class="gi fill"><use href="#i-discord"/></svg> 디스코드 서버 참가</a>
+    <a href="#download">다운로드</a>
+  </div>
+  HIVEDESK — TradingAgents(Apache-2.0) 파이프라인 구조를 참고해 구현 · Claude는 Anthropic의 상표 · 이 사이트는 Anthropic과 무관
+</footer>
+<script>
+document.documentElement.classList.add('anim'); // 진입 애니메이션은 JS 동작 시에만 적용 (점진적 향상)
+
+// ---------- 스크롤 리빌 ----------
+(() => {
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('.rv').forEach((el) => el.classList.add('in'));
+    return;
+  }
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 });
+  document.querySelectorAll('.rv').forEach((el) => io.observe(el));
+})();
+
+// ---------- 판정 티커 (무한 마퀴) ----------
+(() => {
+  const items = [
+    ['BTC', 'buy', '매수 BUY', '82%'], ['삼성전자', 'hold', '홀드 HOLD', '54%'],
+    ['NVDA', 'buy', '매수 BUY', '77%'], ['하이닉스', 'sell', '매도 SELL', '61%'],
+    ['BTC', 'hold', '홀드 HOLD', '48%'], ['ETH', 'buy', '매수 BUY', '66%'],
+  ];
+  const track = document.getElementById('ticker-track');
+  if (!track) return;
+  const html = items.map(([s, cls, act, conf]) =>
+    `<span class="tick"><b class="act ${cls}">${act}</b>${s} · 확신도 ${conf} · 리서치 토론 완료</span>`).join('');
+  track.innerHTML = html + html; // 50% 이동 = 무한 루프
+})();
+
+// ---------- 픽셀 에이전트 걷기 스트립 ----------
+(() => {
+  const cv = document.getElementById('agents-strip');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  if (!ctx) return;
+  const P = 4; // pixel scale
+  const COLORS = {
+    skin: '#e8b88a', hair1: '#3c3226', hair2: '#8b5a2b', hair3: '#d9a441',
+    body1: '#4f8cff', body2: '#2ed573', body3: '#e8c84a', body4: '#8b5cf6',
+    body5: '#ff8c5a', body6: '#5ad0e8', dark: '#26201a',
+  };
+  // 8x10 top-down-ish agent: hat/hair row, face, body, legs (two frames)
+  const SPR = [
+    ' hhhhh   ',
+    'hhhhhh   ',
+    ' fffff   ',
+    ' f f f   ',
+    '  bbb    ',
+    ' bbbbb   ',
+    ' bbbbb   ',
+    '  b b    ',
+    '  d d    ',
+    '  d d    ',
+  ];
+  function draw(agent, x, bob, frame, dir) {
+    for (let ry = 0; ry < SPR.length; ry++) {
+      for (let rx = 0; rx < SPR[ry].length; rx++) {
+        const ch = SPR[ry][rx];
+        if (ch === ' ') continue;
+        let c;
+        if (ch === 'h') c = agent.hair;
+        else if (ch === 'f') c = agent.skin;
+        else if (ch === 'b') c = agent.body;
+        else c = COLORS.dark;
+        let ox = 0;
+        if (ry >= 8) ox = (ry === 8) ? (frame ? 1 : -1) * P : 0; // leg swing
+        ctx.fillStyle = c;
+        ctx.fillRect(x + (rx - 4) * P + ox, ry * P - bob, P, P);
+      }
+    }
+  }
+  const bodies = [COLORS.body1, COLORS.body2, COLORS.body3, COLORS.body4, COLORS.body5, COLORS.body6];
+  const hairs = [COLORS.hair1, COLORS.hair2, COLORS.hair3];
+  const agents = Array.from({ length: 8 }, (_, i) => ({
+    x: 20 + i * 64 + Math.random() * 20,
+    speed: 0.28 + Math.random() * 0.22,
+    dir: Math.random() < .5 ? 1 : -1,
+    bob: Math.random() * 2,
+    hair: hairs[i % hairs.length],
+    body: bodies[i % bodies.length],
+    skin: COLORS.skin,
+    frame: 0, t: 0, phase: Math.random() * 6,
+  }));
+  const W = cv.width, H = cv.height;
+  function loop(now) {
+    ctx.clearRect(0, 0, W, H);
+    // floor line
+    ctx.fillStyle = 'rgba(79,140,255,.15)';
+    ctx.fillRect(0, H - 4, W, 1);
+    for (const a of agents) {
+      a.x += a.speed * a.dir;
+      if (a.x > W - 16) { a.dir = -1; }
+      if (a.x < 16) { a.dir = 1; }
+      a.t += 0.14;
+      a.frame = Math.floor(a.t) % 2;
+      const bob = Math.abs(Math.sin(a.t * 1.6)) * 2 | 0;
+      draw(a, a.x, bob, a.frame, a.dir);
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+
+// ---------- 파이프라인 캐러셀 (한 단계씩 옆으로 전환) ----------
+(() => {
+  const track = document.getElementById('fc-track');
+  if (!track) return;
+  const steps = track.children.length;
+  const dots = document.getElementById('fc-dots');
+  for (let i = 0; i < steps; i++) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fc-dot' + (i === 0 ? ' on' : '');
+    b.setAttribute('aria-label', (i + 1) + '단계');
+    b.addEventListener('click', () => { go(i); restart(); });
+    dots.appendChild(b);
+  }
+  let idx = 0, timer = null;
+  const prev = document.getElementById('fc-prev');
+  const next = document.getElementById('fc-next');
+  function go(i) {
+    idx = (i + steps) % steps;
+    track.style.transform = `translateX(-${idx * 100}%)`;
+    [...dots.children].forEach((d, j) => d.classList.toggle('on', j === idx));
+  }
+  function restart() { clearInterval(timer); timer = setInterval(() => go(idx + 1), 3600); }
+  prev.addEventListener('click', () => { go(idx - 1); restart(); });
+  next.addEventListener('click', () => { go(idx + 1); restart(); });
+  const wrap = document.getElementById('fc');
+  if (wrap) {
+    wrap.addEventListener('mouseenter', () => clearInterval(timer));
+    wrap.addEventListener('mouseleave', restart);
+  }
+  restart();
+})();
+
+// ---------- release manifest 다운로드 링크 ----------
+(async () => {
+  try {
+    const res = await fetch('release/manifest.json');
+    if (!res.ok) return;
+    const manifest = await res.json();
+    document.querySelectorAll('[data-dl]').forEach((a) => {
+      const f = manifest[a.getAttribute('data-dl')];
+      if (f) { a.href = f; a.textContent = '받기'; }
+      else { a.textContent = '준비 중'; a.style.pointerEvents = 'none'; a.style.opacity = '.4'; }
+    });
+  } catch { /* no manifest — keep placeholders */ }
+})();
+</script>
+</body>
+</html>

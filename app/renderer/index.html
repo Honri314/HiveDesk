@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>HiveDesk</title>
+  <link rel="stylesheet" href="./css/index.css" />
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div id="logo">HIVEDESK</div>
+      <nav id="tabs">
+        <button class="tab-btn active" data-tab="office"><canvas class="ic" data-icon="office" data-size="14"></canvas> 오피스</button>
+        <button class="tab-btn" data-tab="auto"><canvas class="ic" data-icon="bolt" data-size="14" data-color="#e8c84a"></canvas> 자동매매</button>
+        <button class="tab-btn" data-tab="portfolio"><canvas class="ic" data-icon="portfolio" data-size="14"></canvas> 포트폴리오</button>
+        <button class="tab-btn" data-tab="settings"><canvas class="ic" data-icon="gear" data-size="14" data-color="#8b98a9"></canvas> 설정</button>
+      </nav>
+      <div id="cl-status"><span class="dot off"></span><span id="cl-status-text">확인 중…</span></div>
+    </header>
+
+    <!-- ============ TAB: OFFICE ============ -->
+    <main id="tab-office" class="tab active">
+      <section id="runbar">
+        <input id="symbol-input" placeholder="BTC, 삼성전자, 하이닉스, NVDA…" spellcheck="false" maxlength="16" />
+        <button id="run-btn" class="primary">회의 시작</button>
+        <span id="run-meta"></span>
+      </section>
+
+      <section id="stage">
+        <div id="floor-wrap">
+          <canvas id="office-canvas" width="416" height="304"></canvas>
+          <div id="bubble-layer"></div>
+        </div>
+        <aside id="command-center">
+          <div class="cc-head">
+            <span class="cc-title">COMMAND CENTER</span>
+          </div>
+          <div id="decision-panel">
+            <div class="dp-head">최종 판정</div>
+            <div id="dp-action">판정 대기 중</div>
+            <div class="dp-row"><span>종목</span><b id="dp-symbol">—</b></div>
+            <div class="dp-row"><span>주문</span><b id="dp-order">—</b></div>
+            <div class="dp-row"><span>확신도</span><b id="dp-conf">—</b></div>
+            <div class="dp-row"><span>엔진</span><b id="dp-engine">—</b></div>
+          </div>
+        </aside>
+      </section>
+      <div id="status-strip"></div>
+
+      <section id="console-wrap">
+        <div id="console-head">
+          <span>◆ 회의 로그 ◆ <span class="dim" id="console-hint">발언 클릭 → 그 시점부터 재생</span></span>
+          <span id="console-count"></span>
+        </div>
+        <div id="console-body"></div>
+        <div id="playbar">
+          <button id="play-btn" class="mini" disabled aria-label="재생"></button>
+          <button id="prev-btn" class="mini" disabled>&lt;</button>
+          <button id="next-btn" class="mini" disabled>&gt;</button>
+          <div id="progress"></div>
+        </div>
+      </section>
+
+      <section id="charts-card">
+        <div id="chart-head"><span id="chart-title">가격 차트</span><span id="chart-src" class="dim"></span></div>
+        <canvas id="price-chart" width="1200" height="260"></canvas>
+      </section>
+    </main>
+
+    <!-- ============ TAB: AUTO TRADE ============ -->
+    <main id="tab-auto" class="tab">
+      <div class="cards">
+        <div class="card"><div class="c-label">전역 킬스위치</div><div class="c-value"><label class="switch"><input type="checkbox" id="ks-toggle" /><span class="slider"></span></label><span id="ks-state" class="badge skip">OFF</span></div></div>
+        <div class="card"><div class="c-label">바이낸스 키</div><div class="c-value" id="st-binance">—</div></div>
+        <div class="card"><div class="c-label">토스증권 키</div><div class="c-value" id="st-toss">—</div></div>
+      </div>
+
+      <div class="panel wide">
+        <div class="panel-head">브로커 API 키 (안전 저장)</div>
+        <div class="form-grid">
+          <label>바이낸스 API Key<input id="binance-key" type="password" autocomplete="off" /></label>
+          <label>바이낸스 Secret<input id="binance-secret" type="password" autocomplete="off" /></label>
+          <label class="chk"><input id="binance-testnet" type="checkbox" /> 테스트넷 사용 (권장)</label>
+          <label>토스증권 Client ID<input id="toss-id" type="password" autocomplete="off" /></label>
+          <label>토스증권 Secret<input id="toss-secret" type="password" autocomplete="off" /></label>
+          <label>토스증권 계좌 SEQ<input id="toss-seq" type="text" autocomplete="off" /></label>
+        </div>
+        <div class="btn-row">
+          <button id="keys-save" class="primary">키 저장</button>
+          <button id="keys-test" class="mini">잔고 조회 테스트</button>
+        </div>
+        <p class="dim" id="bal-out"></p>
+      </div>
+
+      <div class="panel wide">
+        <div class="panel-head">전략 목록 (회의 후 자동 주문)</div>
+        <table id="strategy-table">
+          <thead><tr><th>이름</th><th>종목</th><th>시장</th><th>모드</th><th>자동</th><th>주기</th><th>승인</th><th>실거래</th><th>다음 실행</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="sched-empty" class="dim">전략이 없습니다. 아래에서 추가하세요.</div>
+      </div>
+
+      <div class="panel wide">
+        <div class="panel-head">전략 추가</div>
+        <div class="form-grid">
+          <label>이름<input id="ns-name" placeholder="BTC 스윙김프" maxlength="24" /></label>
+          <label>종목<input id="ns-symbol" placeholder="BTC-USD / 삼성전자 / 005930.KS" maxlength="16" /></label>
+          <label>시장
+            <select id="ns-market"><option value="crypto">암호화폐 (바이낸스)</option><option value="kr_stock">한국 주식 (토스증권)</option></select>
+          </label>
+          <label>모드
+            <select id="ns-mode"><option value="paper">모의거래</option><option value="real">실거래</option></select>
+          </label>
+          <label>자동 실행<select id="ns-auto"><option value="0">수동</option><option value="1">자동</option></select></label>
+          <label>주기(분)<input id="ns-interval" type="number" min="5" max="1440" value="60" /></label>
+          <label>승인 방식
+            <select id="ns-approval"><option value="manual">수동 승인 (안전)</option><option value="auto">자동 체결</option></select>
+          </label>
+          <label>실거래 잠금해제<select id="ns-live"><option value="0">잠금</option><option value="1">해제</option></select></label>
+        </div>
+        <div class="btn-row"><button id="ns-add" class="primary">전략 추가</button></div>
+        <p class="dim">실거래 체결에는 두 가지 잠금이 모두 필요합니다. 전역 킬스위치 ON + 전략별 잠금해제. 수동 승인 방식은 주문이 승인 큐에 대기합니다.</p>
+      </div>
+
+      <div class="panel wide">
+        <div class="panel-head">주문 승인 큐</div>
+        <table id="approval-table">
+          <thead><tr><th>시각</th><th>전략</th><th>종목</th><th>구분</th><th>수량</th><th>가격</th><th>브로커</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="approval-empty" class="dim">대기 중인 주문이 없습니다.</div>
+      </div>
+    </main>
+
+    <!-- ============ TAB: PORTFOLIO ============ -->
+    <main id="tab-portfolio" class="tab">
+      <div class="cards">
+        <div class="card"><div class="c-label">현금</div><div class="c-value" id="pc-cash">—</div></div>
+        <div class="card"><div class="c-label">평가금액</div><div class="c-value" id="pc-value">—</div></div>
+        <div class="card"><div class="c-label">총 자산</div><div class="c-value" id="pc-total">—</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">보유 포지션</div>
+        <table id="pos-table"><thead><tr><th>종목</th><th>수량</th><th>평단</th><th>현재가</th><th>평가손익</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="panel-head">주문 기록</div>
+        <table id="order-table"><thead><tr><th>시각</th><th>종목</th><th>구분</th><th>수량</th><th>가격</th><th>상태</th><th>사유</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="panel-head">결정 기록</div>
+        <table id="decision-table"><thead><tr><th>시각</th><th>종목</th><th>결정</th><th>확신도</th><th>회의</th></tr></thead><tbody></tbody></table>
+      </div>
+    </main>
+
+    <!-- ============ TAB: SETTINGS ============ -->
+    <main id="tab-settings" class="tab">
+      <div class="panel wide">
+        <div class="panel-head">Claude 연동 (계정 로그인)</div>
+        <div id="claude-card">
+          <p id="cl-line1">확인 중…</p>
+          <p class="dim" id="cl-line2"></p>
+          <pre id="cl-steps"></pre>
+        </div>
+      </div>
+      <div class="panel wide">
+        <div class="panel-head">회의 엔진</div>
+        <select id="engine-select">
+          <option value="auto">자동 (Claude 연동시 Claude, 아니면 데모)</option>
+          <option value="demo">데모(룰베이스) 강제</option>
+        </select>
+        <p class="dim">데모 모드는 API 키 없이 파이프라인 구조를 시연합니다. 실제 분석 품질은 Claude 구독 계정 연동에 의존합니다.</p>
+      </div>
+      <div class="panel wide">
+        <div class="panel-head">안전 규칙</div>
+        <p>· 실거래: 전역 킬스위치 + 전략 잠금해제 + (수동 승인일 경우) 승인 큐</p>
+        <p>· 모의거래: 현금 부족·보유 수량 없음 시 주문 자동 기각</p>
+        <p>· 브로커 키는 OS 키체인(safeStorage)으로 암호화 저장</p>
+      </div>
+    </main>
+  </div>
+
+  <div id="toasts"></div>
+  <script src="./js/app.js"></script>
+</body>
+</html>

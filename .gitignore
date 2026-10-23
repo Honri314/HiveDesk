@@ -1,0 +1,36 @@
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local data
+*.db
+*.sqlite3
+data/
+logs/
+
+# OS
+.DS_Store
+
+# Build artifacts / IDE
+build-tmp/
+.idea/
+release/
+app/build/
+app/dist/
+app/release/
