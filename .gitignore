@@ -34,3 +34,7 @@ release/
 app/build/
 app/dist/
 app/release/
+
+# Internal-only files
+rule.md
+buildlog.md
